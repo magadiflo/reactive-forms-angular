@@ -18,14 +18,8 @@ export class MiddlePageComponent {
     doYouPayAttentionToClasses: [false],
     doYouSubmitYourAssignmentsOnTime: [false],
     missingClasses: [false],
-    dataFather: this._fb.group({
-      names: ['', [Validators.required]],
-      lastName: ['', [Validators.required]],
-    }),
-    dataMother: this._fb.group({
-      names: ['', [Validators.required]],
-      lastName: ['', [Validators.required]],
-    }),
+    dataFather: this._fb.control(null, { validators: [Validators.required] }),
+    dataMother: this._fb.control({ value: null, disabled: true}, { validators: [Validators.required] }),
   });
 
   public saveData(): void {

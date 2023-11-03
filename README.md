@@ -195,3 +195,249 @@ Listo, veamos cómo queda el formulario con el nuevo componente agregado y adem�
 ![2.middle-page](./src/assets/2.middle-page.png)
 
 Observamos que los campos correspondientes al componente `<app-person-data/>` no están tomando los valores que le definimos manualmente en el formulario, mientras que los otros campos como los `<input type="check">` sí están tomando sus valores con total normalidad. **¿Qué está pasando?**
+
+Pues, necesitamos que el nuevo componente `<app-person-data></app-person-data>` sea reconocido por el fomulario y para eso necesitamos que dicho componente implemente la interfaz `ControlValueAccessor`.
+
+### Implementando la interfaz ControlValueAccessor
+
+Esta interfaz nos va a permitir que el formulario donde coloquemos el componente `PersonDataComponent` sea reconocido como parte del formulario. Para eso, necesitamos implementar los métodos de dicha interfaz: 
+`writeValue(), registerOnChange(), registerOnTouched(), setDisabledState?()`.
+
+Ahora, en esta sección vamos a tipar el formulario reactivo del componente `PersonDataComponent`, de esa forma seremos más declarativos con nuestro formulario, es decir, construiremos nuestro formulario en base a un modelo.
+
+Recordemos que en un apartado más arriba ya habíamos construido el formulario, pero sin tipar. A continuación mostramos el cambio que le haremos con su tipado correspondiente:
+
+Creamos un archivo llamado `person-data.model.ts` que tendrá la interfaz de nuestro formulario reactivo:
+
+```typescript
+import { FormControl } from "@angular/forms";
+
+export interface IPersonDataForm {
+  names: FormControl<string>;
+  lastName: FormControl<string>;
+}
+
+export interface IPersonData {
+  names: string;
+  lastName: string;
+}
+```
+
+Ahora usamos la interfaz anterior para tipar nuestro formulario:
+
+```typescript
+@Component({
+  selector: 'app-person-data',
+  standalone: true,
+  imports: [ReactiveFormsModule],
+  templateUrl: './person-data.component.html',
+  styles: [],
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => PersonDataComponent),
+      multi: true,
+    },
+  ],
+})
+export class PersonDataComponent implements ControlValueAccessor {
+
+  private _formBuilder = inject(NonNullableFormBuilder);
+
+  /* other attributes */
+
+  public form: FormGroup = this._formBuilder.group<IPersonDataForm>({
+    names: this._formBuilder.control('', { validators: [Validators.required] }),
+    lastName: this._formBuilder.control('', { validators: [Validators.required] }),
+  });
+
+  // ControlValueAccessor --------------------------------------------------------
+  writeValue(obj: IPersonData): void {
+    if (obj) {
+      this.form.setValue(obj);
+    }
+  }
+
+  registerOnChange(fn: Function): void {
+    this._onChanged = fn;
+  }
+
+  registerOnTouched(fn: Function): void {
+    this._onTouch = fn;
+  }
+
+  setDisabledState(isDisabled: boolean): void {
+    isDisabled ? this.form.disable() : this.form.enable();
+  }
+}
+```
+
+### Emitir errores hacia el formulario padre
+
+El formulario anterior ya podría ser reconocido por algún formulario donde sea colocado, pero ahora viene otra pregunta: **¿Cómo hacemos para que nuestro formulario reutilizable emita los errores a su componente padre?**, bueno para eso necesitamos implementar la interfaz `Validator`.
+
+Básicamente, el funcionamiento de la interfaz `Validator` es, cuando en este componente ocurra algún error de validación del formulario los errores se van a propagar al formulario que esté conteniendo este componente.
+
+Veamos su implementación:
+
+
+```typescript
+@Component({
+  selector: 'app-person-data',
+  standalone: true,
+  imports: [ReactiveFormsModule],
+  templateUrl: './person-data.component.html',
+  styles: [],
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => PersonDataComponent),
+      multi: true,
+    },
+    {
+      provide: NG_VALIDATORS,
+      useExisting: forwardRef(() => PersonDataComponent),
+      multi: true,
+    }
+  ],
+})
+export class PersonDataComponent implements ControlValueAccessor, Validator {
+
+  private _formBuilder = inject(NonNullableFormBuilder);
+
+  private _onChanged: Function = (_value: { names: string; lastName: string; }) => { };
+  private _onTouch: Function = (_value: { names: string; lastName: string; }) => { };
+
+  /* other properties */
+
+  constructor() {
+    this.form.valueChanges
+      .subscribe(() => {
+        const value = this.form.value;
+        this._onChanged(value);
+        this._onTouch(value);
+      });
+  }
+
+  // ControlValueAccessor --------------------------------------------------------
+  /* ControlValueAccessor methods */
+
+  // Validator  ------------------------------------------------------------------
+  validate(control: AbstractControl<any, any>): ValidationErrors | null {
+    return this.form.valid ? null : { personData: true };
+  }
+
+  registerOnValidatorChange?(fn: () => void): void {
+    this._onChanged = fn;
+  }
+
+}
+```
+
+### Reutilizando componente PersonDataComponent en formulario reactivo
+
+Una vez terminado de desarrollar nuestro componente reutilizable que tiene un formulario con dos campos, ahora lo vamos a reutilizar en el formulario `MiddlePageComponent`.
+
+
+Nuestro formulario principal quedaría así:
+
+```html
+<form [formGroup]="form" (ngSubmit)="saveData()">
+  <div class="section-check">
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckChecked1"
+        formControlName="doYouPayAttentionToClasses">
+      <label class="form-check-label" for="flexSwitchCheckChecked1">¿Presta atención a las clases?</label>
+    </div>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckChecked2"
+        formControlName="doYouSubmitYourAssignmentsOnTime">
+      <label class="form-check-label" for="flexSwitchCheckChecked2">¿Presenta sus tareas a tiempo?</label>
+    </div>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckChecked3"
+        formControlName="missingClasses">
+      <label class="form-check-label" for="flexSwitchCheckChecked3">¿Falta a clases?</label>
+    </div>
+  </div>
+  <hr>
+  <div class="section-parents">
+    <!-- Reutilizando componente <pp-person-data> -->
+    <app-person-data title="Datos del padre" formControlName="dataFather"/>
+    <hr>
+    <!-- Reutilizando componente <pp-person-data> -->
+    <app-person-data title="Datos de la madre" formControlName="dataMother"/>
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-primary">Guardar</button>
+  </div>
+</form>
+```
+Observar que el componente que hemos desarrollado está siendo tratado como un elemento de fomulario nativo html, por lo que usamos el `formControlName` para especificar a qué campo hace referencia. 
+
+Finalmente, el último cambio se realizará en el formulario padre del `MiddlePageComponent`. El componente que agregamos en el formulario reactivo lo trataremos como un campo del tipo `formControl`, por eso es que usamos el `formControlName` en el html y en su componente de typescript con la ayuda del `formBuilder` lo definiremos como un `control (formControl)`:
+
+````typescript
+@Component({
+  selector: 'app-middle-page',
+  standalone: true,
+  imports: [ReactiveFormsModule, PersonDataComponent],
+  templateUrl: './middle-page.component.html',
+  styles: [
+  ]
+})
+export class MiddlePageComponent {
+  private _fb = inject(FormBuilder);
+
+  public form: FormGroup = this._fb.group({
+    doYouPayAttentionToClasses: [false],
+    doYouSubmitYourAssignmentsOnTime: [false],
+    missingClasses: [false],
+    dataFather: this._fb.control(null, { validators: [Validators.required]}),
+    dataMother: this._fb.control(null, { validators: [Validators.required]}),
+  });
+
+  public saveData(): void {
+    console.log(this.form.value);
+  }
+}
+````
+
+Ejecutamos la aplicación y esta vez veremos que el formulario está reconociendo los campos del nuevo componente:
+
+![3.middle-page](./src/assets/3.middle-page.png)
+
+Como ahora el componente `PersonDataComponent` ya tiene implementado el `ControlValueAccessor` podemos tratar a ese componente como un elmento de formulario html nativo. En ese sentido, lo vamos a iniciar deshabilitado, para eso, necesitamos realizar lo siguiente:
+
+````typescript
+@Component({
+  selector: 'app-middle-page',
+  standalone: true,
+  imports: [ReactiveFormsModule, PersonDataComponent],
+  templateUrl: './middle-page.component.html',
+  styles: [
+  ]
+})
+export class MiddlePageComponent {
+  /* other property */
+
+  public form: FormGroup = this._fb.group({
+    /*other propety*/
+    dataMother: this._fb.control({ value: null, disabled: true }, { validators: [Validators.required] }),
+  });
+
+  /* other method */
+}
+````
+
+Como observamos, estamos iniciando el campo `dataModher` deshabilitado, eso significa que ese objeto estaría llegando al método `setDisabledState()` del `ControlValueAccessor` y allí hacemos la comprobación y deshabilitación de los campos:
+
+````typescript
+// En el PersonDataComponent
+//
+setDisabledState(isDisabled: boolean): void {
+  isDisabled ? this.form.disable() : this.form.enable();
+}
+````
+
+![campos desactivados](./src/assets/4.middle-page.png)
