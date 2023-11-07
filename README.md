@@ -441,3 +441,27 @@ setDisabledState(isDisabled: boolean): void {
 ````
 
 ![campos desactivados](./src/assets/4.middle-page.png)
+
+---
+
+# ControlContainer
+
+---
+
+`ControlContainer` es una clase base para directivas de formulario que contienen múltiples instancias registradas de NgControl. Podemos usar ControlContainer para acceder a FormControls, FormGroups y FormArrays y administrar un formulario principal dividido en componentes.
+
+`ControlContainer` es como un asistente que te ayuda a trabajar con controles de fomularios en diferentes partes de tu aplicación Angular, especialmente cuando tienes formularios anidados.
+
+![Control Container](./src/assets/5.control-container.png)
+
+De la imagen anterior podemos decir: 
+
+> Un `componente` en Angular puede tener muchos formularios reactivos, muchos `FormGroup`. Lo interesante es que **apenas se cree un FormGroup** inmediatamente Angular creará un `ControlContainer` para el componente. Ese `ControlContainer` lo que hará será albergar la instancia de cada formulario que hayamos creado en ese componente. Entonces, si nuestro componente tuviese 10 formularios, las 10 instancias de los formularios estarán dentro del `ControlContainer`. 
+>
+> El principio anterior se repetirá en cada uno de los componentes que implemente formularios reactivos, es decir, en cada componente que se cree formularios reactivos, de inmediato ese componetne tendrá su propio `ControlContainer.`
+
+## Uso del ControlContainer en Formularios Anidados
+
+Podemos hacer uso del `ControlContainer` cuando tenemos un componente que tiene un formulario reactivo y uno de los campos de dicho formulario (grupoB) lo agrupamos en otro componente y ahora lo que queremos lograr es que esta unión del formulario con el otro componente sea tratado como un formulario normal:
+
+![componente control-container](./src/assets/6.componente-control-container.png)
