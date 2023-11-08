@@ -1,7 +1,8 @@
 import { Component, inject } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { PersonDataComponent } from './person-data/person-data.component';
+import { IStudentForm } from 'src/app/model/person-data.model';
 
 @Component({
   selector: 'app-middle-page',
@@ -12,14 +13,14 @@ import { PersonDataComponent } from './person-data/person-data.component';
   ]
 })
 export class MiddlePageComponent {
-  private _fb = inject(FormBuilder);
+  private _fb = inject(NonNullableFormBuilder);
 
-  public form: FormGroup = this._fb.group({
-    doYouPayAttentionToClasses: [false],
-    doYouSubmitYourAssignmentsOnTime: [false],
-    missingClasses: [false],
+  public form: FormGroup = this._fb.group<IStudentForm>({
+    doYouPayAttentionToClasses: this._fb.control(false),
+    doYouSubmitYourAssignmentsOnTime: this._fb.control(false),
+    missingClasses: this._fb.control(false),
     dataFather: this._fb.control(null, { validators: [Validators.required] }),
-    dataMother: this._fb.control({ value: null, disabled: true}, { validators: [Validators.required] }),
+    dataMother: this._fb.control({ value: null, disabled: true }, { validators: [Validators.required] }),
   });
 
   public saveData(): void {

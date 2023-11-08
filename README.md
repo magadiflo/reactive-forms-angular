@@ -375,6 +375,21 @@ Nuestro formulario principal quedaría así:
 ```
 Observar que el componente que hemos desarrollado está siendo tratado como un elemento de fomulario nativo html, por lo que usamos el `formControlName` para especificar a qué campo hace referencia. 
 
+Antes de comenzar a construir el formulario reactivo en el archivo de typescript, es improtante crear las interfaces de modelo sobre el que nos basaremos para hacerlo tipado el formulario:
+
+```typescript
+// Otras interfaces
+//
+// Usado en el middle-page
+export interface IStudentForm {
+  doYouPayAttentionToClasses: FormControl<boolean>;
+  doYouSubmitYourAssignmentsOnTime: FormControl<boolean>;
+  missingClasses: FormControl<boolean>;
+  dataFather: FormControl<IPersonData | null>;
+  dataMother: FormControl<IPersonData | null>;
+}
+```
+
 Finalmente, el último cambio se realizará en el formulario padre del `MiddlePageComponent`. El componente que agregamos en el formulario reactivo lo trataremos como un campo del tipo `formControl`, por eso es que usamos el `formControlName` en el html y en su componente de typescript con la ayuda del `formBuilder` lo definiremos como un `control (formControl)`:
 
 ````typescript
@@ -387,14 +402,14 @@ Finalmente, el último cambio se realizará en el formulario padre del `MiddlePa
   ]
 })
 export class MiddlePageComponent {
-  private _fb = inject(FormBuilder);
+  private _fb = inject(NonNullableFormBuilder);
 
-  public form: FormGroup = this._fb.group({
-    doYouPayAttentionToClasses: [false],
-    doYouSubmitYourAssignmentsOnTime: [false],
-    missingClasses: [false],
-    dataFather: this._fb.control(null, { validators: [Validators.required]}),
-    dataMother: this._fb.control(null, { validators: [Validators.required]}),
+  public form: FormGroup = this._fb.group<IStudentForm>({
+    doYouPayAttentionToClasses: this._fb.control(false),
+    doYouSubmitYourAssignmentsOnTime: this._fb.control(false),
+    missingClasses: this._fb.control(false),
+    dataFather: this._fb.control(null, { validators: [Validators.required] }),
+    dataMother: this._fb.control({ value: null, disabled: true }, { validators: [Validators.required] }),
   });
 
   public saveData(): void {
@@ -421,7 +436,7 @@ Como ahora el componente `PersonDataComponent` ya tiene implementado el `Control
 export class MiddlePageComponent {
   /* other property */
 
-  public form: FormGroup = this._fb.group({
+  public form: FormGroup = this._fb.group<IStudentForm>({
     /*other propety*/
     dataMother: this._fb.control({ value: null, disabled: true }, { validators: [Validators.required] }),
   });
