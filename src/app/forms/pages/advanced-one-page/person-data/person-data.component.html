@@ -1,0 +1,15 @@
+<h6>{{ title }}</h6>
+<div class="row father-data" [formGroupName]="formGroupName">
+  <div class="col-6">
+    <div class="mb-3">
+      <label for="name-father" class="form-label">Nombres</label>
+      <input type="text" class="form-control" id="name-father" formControlName="names">
+    </div>
+  </div>
+  <div class="col-6">
+    <div class="mb-3">
+      <label for="lastname-father" class="form-label">Apellidos</label>
+      <input type="text" class="form-control" id="lastname-father" formControlName="lastName">
+    </div>
+  </div>
+</div>

@@ -10,11 +10,18 @@ export interface IPersonData {
   lastName: string;
 }
 
-// Usado en el middle-page
+// Usado en middle-page
 export interface IStudentForm {
   doYouPayAttentionToClasses: FormControl<boolean>;
   doYouSubmitYourAssignmentsOnTime: FormControl<boolean>;
   missingClasses: FormControl<boolean>;
   dataFather: FormControl<IPersonData | null>;
   dataMother: FormControl<IPersonData | null>;
+}
+
+// Usado en advanced-one-page
+export interface IStudentAdvancedOneForm {
+  doYouPayAttentionToClasses: FormControl<boolean>;
+  doYouSubmitYourAssignmentsOnTime: FormControl<boolean>;
+  missingClasses: FormControl<boolean>;
 }

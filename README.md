@@ -480,3 +480,192 @@ De la imagen anterior podemos decir:
 Podemos hacer uso del `ControlContainer` cuando tenemos un componente que tiene un formulario reactivo y uno de los campos de dicho formulario (grupoB) lo agrupamos en otro componente y ahora lo que queremos lograr es que esta unión del formulario con el otro componente sea tratado como un formulario normal:
 
 ![componente control-container](./src/assets/6.componente-control-container.png)
+
+Veamos a continuación cómo implementar el `ControlContainer`. Para eso, lo primero que haremos será crear nuestra interfaz de modelo para tener tipado nuestro fomulario:
+
+
+````typescript
+// Más interfaces
+//
+// Usado en advanced-one-page
+export interface IStudentAdvancedOneForm {
+  doYouPayAttentionToClasses: FormControl<boolean>;
+  doYouSubmitYourAssignmentsOnTime: FormControl<boolean>;
+  missingClasses: FormControl<boolean>;
+}
+````
+
+### Componente Reutilizable
+
+Este ejemplo lo trabajaremos en el directorio `advanced-one-page`, por lo que necesitamos crear un componente dentro de dicho directorio que será el componente que reutilizaremos para este ejemplo:
+
+````bash
+src/app/forms/pages/advanced-one-page/person-data/person-data.component.ts
+src/app/forms/pages/advanced-one-page/person-data/person-data.component.html
+````
+
+Procedemos a implementar este nuevo componente creado:
+
+````html
+<h6>{{ title }}</h6>
+<div class="row father-data" [formGroupName]="formGroupName">
+  <div class="col-6">
+    <div class="mb-3">
+      <label for="name-father" class="form-label">Nombres</label>
+      <input type="text" class="form-control" id="name-father" formControlName="names">
+    </div>
+  </div>
+  <div class="col-6">
+    <div class="mb-3">
+      <label for="lastname-father" class="form-label">Apellidos</label>
+      <input type="text" class="form-control" id="lastname-father" formControlName="lastName">
+    </div>
+  </div>
+</div>
+````
+Nótese que en la etiqueta `div` estamos usando el atributo del formulario reactivo  `formGroupName` que nos permite agrupar campos del formulario, por lo que en los `<input>` observamos el uso de otro atributo del formulario reactivo el `formControlName`.
+
+Ahora toca implementar el componete de typescript `PersonDataComponent`:
+
+````typescript
+@Component({
+  selector: 'advanced-person-data',
+  standalone: true,
+  imports: [ReactiveFormsModule],
+  templateUrl: './person-data.component.html',
+  styles: [],
+  viewProviders: [
+    {
+      provide: ControlContainer,
+      useFactory: () => inject(ControlContainer, { skipSelf: true})
+  ]
+})
+export class PersonDataComponent implements OnInit {
+
+  private _formBuilder = inject(NonNullableFormBuilder);
+  private _parentContainer = inject(ControlContainer);
+
+  @Input({ required: true })
+  public title: string = '';
+
+  @Input({ required: true })
+  public formGroupName: string = '';
+
+  public get parentFormGroup(): FormGroup {
+    return this._parentContainer.control as FormGroup;
+  }
+
+  public get formGroupChild(): FormGroup<IPersonDataForm> {
+    return this._formBuilder.group<IPersonDataForm>({
+      names: this._formBuilder.control('', { validators: [Validators.required] }),
+      lastName: this._formBuilder.control('', { validators: [Validators.required] }),
+    });
+  }
+
+  ngOnInit(): void {
+    this.parentFormGroup.addControl(this.formGroupName, this.formGroupChild);
+  }
+
+}
+````
+**DONDE**
+- Recordemos la teoría, decíamos que cuando en un componente apenas se haga uso de un `FormGroup` inmediatamente Angular crearía un `ControlContainer` para ese componente. En nuestro caso, para nuestro componente `PersonDataComponent` Angular también le creará un `ControlContainer`, ya que estamos haciendo uso de un `FormGroup`. Ahora, con todo lo dicho, lo que necesitamos es poder acceder al `ControlContainer` del padre y no a nuestro propio `ControlContainer`. Entonces, para eso necesitamos agregar en el decorador `@Component` la configuración: 
+
+````json
+viewProviders: [
+    {
+      provide: ControlContainer,
+      useFactory: () => inject(ControlContainer, { skipSelf: true })
+    }
+]
+````
+Donde el `skipSelf`, buscará la referencia a la instancia de este control container, pero no en este componente, sino fuera de él, usará la referencia del control container más cercano, o sea su padre.
+
+- `private _parentContainer = inject(ControlContainer)`, como configuramos en el decorador el poder acceder al `ControlContainer` padre, al hacer la inyección de dependencia, lo que finalmente será inyectado es el `ControlContainer` padre. Entonces, esta inyección nos va a permitir acceder al controlContainer del componente padre, pero es importante agregar en la configuración del `@Component()` la configuración del `viewProviders`, si no agregamos dicha configuración, usará el `ControlContainer` de este componente `PersonDataComponent` y nosotros no queremos eso, al contrario, queremos usar el `ControlContainer` del padre de este componente.
+
+- `@Input({ required: true }) public formGroupName: string = '';`, propiedad que será pasado al momento de utilizar el componente. Esta propiedad será asignada al elmento del formulario reactivo en el html `formGroupName` para agrupara los demás campos del formulario.
+
+- El get `parentFormGroup` retornará el formulario padre.
+- `return this._parentContainer.control as FormGroup`, casteamos a FormGroup porque sabemos que hay un único formulario FormGroup padre. Si hubieran más formularios padres, tendríamos que usar el `this._parentContainer.control?.get(index)` buscar la posición, pero en este caso, solo tenemos uno por eso hacemos defrente el cast.
+
+- `this.parentFormGroup.addControl(this.formGroupName, this.formGroupChild)`, al formulario padre o la instancia principal `this.parentFormGroup`, le agregamos un nuevo control cuyo nombre es `this.formGroupName` y el control a agregar es `this.formGroupChild`.
+
+Finalmente, recordar que el siguiente trozo de código representa el formulario html de este componente:
+
+````typescript
+public get formGroupChild(): FormGroup<IPersonDataForm> {
+  return this._formBuilder.group<IPersonDataForm>({
+    names: this._formBuilder.control('', { validators: [Validators.required] }),
+    lastName: this._formBuilder.control('', { validators: [Validators.required] }),
+  });
+}
+````
+
+### Componente Padre
+
+Ahora nos toca implementar el componente principal o padre:
+
+````html
+<form [formGroup]="form" (ngSubmit)="saveData()">
+<div class="section-check">
+  <div class="form-check form-switch">
+    <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckChecked1"
+      formControlName="doYouPayAttentionToClasses">
+    <label class="form-check-label" for="flexSwitchCheckChecked1">¿Presta atención a las clases?</label>
+  </div>
+  <div class="form-check form-switch">
+    <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckChecked2"
+      formControlName="doYouSubmitYourAssignmentsOnTime">
+    <label class="form-check-label" for="flexSwitchCheckChecked2">¿Presenta sus tareas a tiempo?</label>
+  </div>
+  <div class="form-check form-switch">
+    <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckChecked3"
+      formControlName="missingClasses">
+    <label class="form-check-label" for="flexSwitchCheckChecked3">¿Falta a clases?</label>
+  </div>
+</div>
+<hr>
+<div class="section-parents">
+  <advanced-person-data title="Datos del padre" formGroupName="dataFather" />
+  <hr>
+  <advanced-person-data title="Datos de la madre" formGroupName="dataMother" />
+</div>
+<div class="col-auto">
+  <button type="submit" class="btn btn-primary">Guardar</button>
+</div>
+</form>
+````
+Nótese que en el `<div class="section-parents"></div>` estamos incluyendo el componente reutilizable `<advanced-person-data />` y además le pasamos las dos propiedades que espera recibir dicho componente.
+
+Ahora, definimos la clase de typescript:
+
+```typescript
+@Component({
+  selector: 'app-advanced-one-page',
+  standalone: true,
+  imports: [ReactiveFormsModule, PersonDataComponent],
+  templateUrl: './advanced-one-page.component.html',
+  styles: [
+  ]
+})
+export class AdvancedOnePageComponent {
+  private _fb = inject(NonNullableFormBuilder);
+
+  public form: FormGroup = this._fb.group<IStudentAdvancedOneForm>({
+    doYouPayAttentionToClasses: this._fb.control(false),
+    doYouSubmitYourAssignmentsOnTime: this._fb.control(false),
+    missingClasses: this._fb.control(false),
+  });
+
+  public saveData(): void {
+    console.log(this.form.value);
+  }
+}
+```
+Del código anterior podemos observar que solamente estamos definiendo los tres campos que están en el formulario html, mientras que los otros dos grupos de campos: `dataFather` y `dataMother` no lo definimos ya que eso lo estamos haciendo dentro del mismo contenedor reutilizable. En otras palabras, dentro del contenedor reutilizable estamos obteniendo este formulario reactivo padre y allí mismo le estamos agregando el formulario que construimos en dicho componente hijo.
+
+Listo, esto sería todo. Ahora realicemos unas pruebas y veamos su funcionamiento:
+
+![control-container-advanced](./src/assets/7.control-container-advanced.png)
+
+Vemos que el `ControlContainer` implementado está funcionando correctamente.
