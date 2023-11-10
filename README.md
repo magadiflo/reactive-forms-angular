@@ -669,3 +669,83 @@ Listo, esto sería todo. Ahora realicemos unas pruebas y veamos su funcionamient
 ![control-container-advanced](./src/assets/7.control-container-advanced.png)
 
 Vemos que el `ControlContainer` implementado está funcionando correctamente.
+
+## Accediendo desde el formulario principal hacia el formulario hijo
+
+Supongamos que queremos acceder desde el formulario principal a los campos del formulario hijo, del formulario que colocamos en otro componente **¿cómo podríamos hacerlo?**
+
+Para poder acceder a los campos del hijo, sencillamente desde el formulario padre podemos utilizar `controls[]` o `get()` y colocar dentro el nombre del grupo de campos `(formGroupName)` al que queremos acceder.
+
+````typescript
+@Component({
+  selector: 'app-advanced-one-page',
+  standalone: true,
+  imports: [ReactiveFormsModule, PersonDataComponent],
+  templateUrl: './advanced-one-page.component.html',
+  styles: [
+  ]
+})
+export class AdvancedOnePageComponent {
+  private _fb = inject(NonNullableFormBuilder);
+
+  public form: FormGroup = this._fb.group<IStudentAdvancedOneForm>({
+    doYouPayAttentionToClasses: this._fb.control(false),
+    doYouSubmitYourAssignmentsOnTime: this._fb.control(false),
+    missingClasses: this._fb.control(false),
+  });
+
+  public saveData(): void {
+    console.log(this.form.value);
+    console.log(this.form.controls['dataFather'].value); //<-- accediendo a los campos del formulario hijo
+    console.log(this.form.get('dataFather')?.value); //<-- otra forma de acceder a los campos del formulario hijo
+  }
+}
+````
+Resultado obtenido en la consola del navegador:
+````js
+{
+  doYouPayAttentionToClasses: true, doYouSubmitYourAssignmentsOnTime: true, missingClasses: true, 
+  dataFather: {lastName: "Díaz Flores", names: "Martín Gaspar"}, 
+  dataMother: {lastName: "Saldaña", names: "Fernanda"}
+}
+
+{names: 'Martín Gaspar', lastName: 'Díaz Flores'}
+{names: 'Martín Gaspar', lastName: 'Díaz Flores'}
+````
+
+## Manteniendo el tipado del formulario hijo
+
+En el código estamos accediendo a los campos de los formularios hijos de varias formas, como por ejemplo: `this.form.controls['dataFather'].value`. Ahora, qué pasa si quisiéramos mantener el tipado, lo que podríamos hacer es:
+
+````typescript
+const data = this.form.controls['dataFather'].value as IPersonData;
+````
+
+Pero, podríamos hacerlo de otra forma, apoyándonos de las bondades de typescript. Para eso crearemos un archivo de utilitario y definiremos una función de conversión:
+
+````typescript
+import { FormGroup } from "@angular/forms";
+
+export const getFormControlValueAsType = <T>(formGroup: FormGroup, controlName: string): T | null => {
+  const control = formGroup.get(controlName);
+  return control ? control.value as T : null;
+}
+````
+Ahora sí, podemos usar la función genérica y este nos retornará el valor tipado:
+
+````typescript
+@Component({...})
+export class AdvancedOnePageComponent {
+  // Other code
+
+  public saveData(): void {
+    const data = getFormControlValueAsType<IPersonData>(this.form, 'dataFather');
+    console.log(data);
+  }
+}
+ ````
+ Como resultado debemos obtener el json de abajo, pero lo interesante de aquí es que la constante data está tipada, es decir si le damos `.` nos mostrará `names` y  `lastName`:
+ 
+ ````js
+ {names: 'Martín Gaspar', lastName: 'Díaz Flores'}
+ ````

@@ -1,8 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { FormGroup, NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 
-import { IStudentAdvancedOneForm } from 'src/app/model/person-data.model';
+import { IPersonData, IStudentAdvancedOneForm } from 'src/app/model/person-data.model';
 import { PersonDataComponent } from './person-data/person-data.component';
+import { getFormControlValueAsType } from './util/functions-form';
 
 @Component({
   selector: 'app-advanced-one-page',
@@ -23,5 +24,10 @@ export class AdvancedOnePageComponent {
 
   public saveData(): void {
     console.log(this.form.value);
+    console.log(this.form.controls['dataFather'].value);
+    console.log(this.form.get('dataFather')?.value);
+
+    const data = getFormControlValueAsType<IPersonData>(this.form, 'dataFather');
+    console.log(data);
   }
 }
