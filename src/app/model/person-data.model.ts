@@ -1,4 +1,4 @@
-import { FormControl } from "@angular/forms";
+import { FormControl, FormGroup } from "@angular/forms";
 
 export interface IPersonDataForm {
   names: FormControl<string>;
@@ -24,4 +24,13 @@ export interface IStudentAdvancedOneForm {
   doYouPayAttentionToClasses: FormControl<boolean>;
   doYouSubmitYourAssignmentsOnTime: FormControl<boolean>;
   missingClasses: FormControl<boolean>;
+}
+
+// Usado en advanced-two-page
+export interface IStudentAdvancedTwoForm {
+  doYouPayAttentionToClasses: FormControl<boolean>;
+  doYouSubmitYourAssignmentsOnTime: FormControl<boolean>;
+  missingClasses: FormControl<boolean>;
+  dataFather: FormGroup<IPersonDataForm>;
+  dataMother: FormGroup<IPersonDataForm>;
 }

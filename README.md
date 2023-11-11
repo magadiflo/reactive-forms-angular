@@ -749,3 +749,156 @@ export class AdvancedOnePageComponent {
  ````js
  {names: 'Martín Gaspar', lastName: 'Díaz Flores'}
  ````
+
+## Uso del Control Container 2
+
+En este apartado volveremos a usar el `ControlContainer` pero esta vez de manera distinta a lo que hicimos en el apartado anterior.
+
+Lo primero que haremos será crear nuestro modelo para tipar nuestro formulario. Observemos que el modelo que vamos a crear tiene todos los campos del formulario tipado:
+
+````typescript
+// Usado en advanced-two-page
+export interface IStudentAdvancedTwoForm {
+  doYouPayAttentionToClasses: FormControl<boolean>;
+  doYouSubmitYourAssignmentsOnTime: FormControl<boolean>;
+  missingClasses: FormControl<boolean>;
+  dataFather: FormGroup<IPersonDataForm>;
+  dataMother: FormGroup<IPersonDataForm>;
+}
+````
+
+### Componente Hijo
+
+Ahora crearemos nuestro componente reutilizable y lo implementaremos. Empezamos con el `advanced-two-person-data.component.html`:
+
+````html
+<h6>{{ title }}</h6>
+<div class="row father-data" [formGroup]="formGroup">
+  <div class="col-6">
+    <div class="mb-3">
+      <label for="name-father" class="form-label">Nombres</label>
+      <input type="text" class="form-control" id="name-father" formControlName="names">
+    </div>
+  </div>
+  <div class="col-6">
+    <div class="mb-3">
+      <label for="lastname-father" class="form-label">Apellidos</label>
+      <input type="text" class="form-control" id="lastname-father" formControlName="lastName">
+    </div>
+  </div>
+</div>
+````
+**¡Importante!** Observar que lo que engloba a todos los elementos del html es el `[formGroup]`, aquí lo estamos definiendo como si fuera un formulario.
+
+Ahora crearemos el componente de typescript `advanced-two-person-data.component.ts`:
+
+````typescript
+@Component({
+  selector: 'advanced-two-person-data',
+  standalone: true,
+  imports: [ReactiveFormsModule],
+  templateUrl: './advanced-two-person-data.component.html',
+  styles: [
+  ]
+})
+export class AdvancedTwoPersonDataComponent implements OnInit {
+
+  @Input({ required: true })
+  public title: string = '';
+
+  @Input({ required: true })
+  public controlKey: string = '';
+
+  public formGroup!: FormGroup;
+
+  public get parentFormGroup() {
+    return this._parentContainer.control?.get(this.controlKey) as FormGroup;
+  }
+
+  private _parentContainer = inject(ControlContainer);
+
+  ngOnInit(): void {
+    this.formGroup = this.parentFormGroup;
+  }
+
+}
+````
+
+**NOTA**
+
+- Observar que ahora `no estamos usando en la anotación @Component el viewProviders`.
+- Para que esto funcione necesariamente tenemos que usar en el componente hijo el `FormGroup`, es decir, necesitamos envovler todo su elemento html en un `FormGroup`.
+- Pero si usamos en el componente hijo las directivas: `formGroupName, formArrayName o formControlName` esta nueva solución no nos sirve, en ese caso nos sirviría la solución de la página `advanced-one-page`, es decir la solución donde agregábamos en la anotación `@Component el atributo viewProviders`.
+
+### Componente Principal
+
+A continuación se muestra el componente html del `advanced-two-page.component.html`:
+
+````html
+<form [formGroup]="form" (ngSubmit)="saveData()">
+  <div class="section-check">
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckChecked1"
+        formControlName="doYouPayAttentionToClasses">
+      <label class="form-check-label" for="flexSwitchCheckChecked1">¿Presta atención a las clases?</label>
+    </div>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckChecked2"
+        formControlName="doYouSubmitYourAssignmentsOnTime">
+      <label class="form-check-label" for="flexSwitchCheckChecked2">¿Presenta sus tareas a tiempo?</label>
+    </div>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckChecked3"
+        formControlName="missingClasses">
+      <label class="form-check-label" for="flexSwitchCheckChecked3">¿Falta a clases?</label>
+    </div>
+  </div>
+  <hr>
+  <div class="section-parents">
+    <advanced-two-person-data title="Datos del padre" controlKey="dataFather" />
+    <hr>
+    <advanced-two-person-data title="Datos de la madre" controlKey="dataMother" />
+  </div>
+  <div class="col-auto">
+    <button type="submit" [disabled]="form.invalid" class="btn btn-primary">Guardar</button>
+  </div>
+</form>
+````
+
+Finalmente se muestra el componente de typescript `advanced-two-page.component.ts`:
+
+````typescript
+@Component({
+  selector: 'app-advanced-two-page',
+  standalone: true,
+  imports: [ReactiveFormsModule, AdvancedTwoPersonDataComponent],
+  templateUrl: './advanced-two-page.component.html',
+  styles: [
+  ]
+})
+export class AdvancedTwoPageComponent {
+  private _fb = inject(NonNullableFormBuilder);
+
+  public form: FormGroup = this._fb.group<IStudentAdvancedTwoForm>({
+    doYouPayAttentionToClasses: this._fb.control(false),
+    doYouSubmitYourAssignmentsOnTime: this._fb.control(false),
+    missingClasses: this._fb.control(false),
+    dataFather: this._fb.group({
+      names: this._fb.control('', { validators: [Validators.required] }),
+      lastName: this._fb.control('', { validators: [Validators.required] }),
+    }),
+    dataMother: this._fb.group({
+      names: this._fb.control('', { validators: [Validators.required] }),
+      lastName: this._fb.control('', { validators: [Validators.required] }),
+    }),
+  });
+
+  public saveData(): void {
+    console.log(this.form.value);
+  }
+}
+````
+
+Ahora comprobamos el formulario con el nuevo uso del `ControlContainer`:
+
+![control container advanced 2](./src/assets/8.control-container-advance-2.png)
